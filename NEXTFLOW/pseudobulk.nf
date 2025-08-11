@@ -62,7 +62,7 @@ process pseudobulk_singlecell {
       assay  = "${params.counts_assay}",
       slot   = "${params.counts_slot}"
     )
-    gene_locations <- get_gene_locations(counts_mat)
+    gene_locations <- get_gene_locations(counts_mat))
     data.table::fwrite(gene_locations, "gene_locations.csv")
 
     # List of “cell types” emitted (now includes Bulk)
