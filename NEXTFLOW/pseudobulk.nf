@@ -3,7 +3,7 @@ process pseudobulk_singlecell {
     label "process_high_memory"
     publishDir "${params.outdir}/expression_matrices/", mode: "copy"
 
-    input: 
+    input:
     path single_cell_file
     path source_R
 
@@ -11,31 +11,62 @@ process pseudobulk_singlecell {
     path "ct_names.txt", emit: ct_names
     path "*pseudobulk.csv", emit: pseudobulk_counts
     path "gene_locations.csv", emit: gene_locations
-    
+
+
     script:
     """
     #!/usr/bin/env Rscript
     library(Seurat)
     library(BPCells)
     library(dplyr)
+    library(Matrix)
+    library(data.table)
 
     source("$source_R")
 
-    seuratobj=readRDS("$single_cell_file")
-    celltypelist=Seurat::SplitObject(seuratobj,split.by="${params.celltype_column}")
-    aggregated_counts_list=pseudobulk_counts(celltypelist,
-    min.cells=as.numeric(${params.min_cells}),
-    indiv_col="${params.individual_column}",
-    assay="${params.counts_assay}",
-    slot="${params.counts_slot}")
-    for (i in 1:length(aggregated_counts_list)) {
-        df=aggregated_counts_list[[i]] %>% mutate(geneid=row.names(.)) 
-        celltype=names(aggregated_counts_list[i])
-        data.table::fwrite(df, paste0(names(aggregated_counts_list[i]), "_pseudobulk.csv"))
+    # Load object
+    seuratobj <- readRDS("$single_cell_file")
+
+    # (A) Per–cell type pseudobulk
+    celltypelist <- Seurat::SplitObject(seuratobj, split.by = "${params.celltype_column}")
+
+    aggregated_by_ct <- pseudobulk_counts(
+      seuratlist = celltypelist,
+      min.cells  = as.numeric(${params.min_cells}),
+      indiv_col  = "${params.individual_column}",
+      assay      = "${params.counts_assay}",
+      slot       = "${params.counts_slot}"
+    )
+
+    for (i in seq_along(aggregated_by_ct)) {
+      df <- aggregated_by_ct[[i]] %>% mutate(geneid = rownames(.))
+      ct <- names(aggregated_by_ct)[i]
+      data.table::fwrite(df, paste0(ct, "_pseudobulk.csv"))
     }
-    gene_locations=get_gene_locations(aggregated_counts_list[[1]])
-    data.table::fwrite(gene_locations,"gene_locations.csv")
-    writeLines(names(aggregated_counts_list), "ct_names.txt")
+
+    # (B) Whole “Bulk” pseudobulk (all cells, still per individual)
+    bulk_list <- list(Bulk = seuratobj)
+    aggregated_bulk <- pseudobulk_counts(
+      seuratlist = bulk_list,
+      min.cells  = as.numeric(${params.min_cells}),
+      indiv_col  = "${params.individual_column}",
+      assay      = "${params.counts_assay}",
+      slot       = "${params.counts_slot}"
+    )
+    bulk_df <- aggregated_bulk[[1]] %>% mutate(geneid = rownames(.))
+    data.table::fwrite(bulk_df, "Bulk_pseudobulk.csv")
+
+    # Gene locations (robust, based on assay rownames)
+    counts_mat <- Seurat::GetAssayData(
+      object = seuratobj,
+      assay  = "${params.counts_assay}",
+      slot   = "${params.counts_slot}"
+    )
+    gene_locations <- get_gene_locations(counts_mat)
+    data.table::fwrite(gene_locations, "gene_locations.csv")
+
+    # List of “cell types” emitted (now includes Bulk)
+    ct_names <- c(names(aggregated_by_ct), "Bulk")
+    writeLines(ct_names, "ct_names.txt")
     """
 }
-// docker run -it --rm -v /var/lib/docker/alex_tmp/data/:/mnt/data ah3918/expression_image:latest
