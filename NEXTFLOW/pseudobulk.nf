@@ -27,7 +27,7 @@ process pseudobulk_singlecell {
     # Load object
     seuratobj <- readRDS("$single_cell_file")
 
-    # (A) Per–cell type pseudobulk
+    # Per–cell type pseudobulk
     celltypelist <- Seurat::SplitObject(seuratobj, split.by = "${params.celltype_column}")
 
     aggregated_by_ct <- pseudobulk_counts(
@@ -44,7 +44,7 @@ process pseudobulk_singlecell {
       data.table::fwrite(df, paste0(ct, "_pseudobulk.csv"))
     }
 
-    # (B) Whole “Bulk” pseudobulk (all cells, still per individual)
+    # Whole “Bulk” pseudobulk (all cells, still per individual)
     bulk_list <- list(Bulk = seuratobj)
     aggregated_bulk <- pseudobulk_counts(
       seuratlist = bulk_list,
