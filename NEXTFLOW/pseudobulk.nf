@@ -12,17 +12,17 @@ process pseudobulk_singlecell {
     path "*pseudobulk.csv", emit: pseudobulk_counts
     path "gene_locations.csv", emit: gene_locations
 
-
     script:
     """
     #!/usr/bin/env Rscript
-    library(Seurat)
-    library(BPCells)
-    library(dplyr)
-    library(Matrix)
-    library(data.table)
+    suppressPackageStartupMessages({
+      library(Seurat)
+      library(dplyr)
+      library(Matrix)
+      library(data.table)
+    })
 
-    source("$source_R")
+    source("$source_R")  # defines pseudobulk_counts(), get_gene_locations(), etc.
 
     # Load object
     seuratobj <- readRDS("$single_cell_file")
@@ -38,9 +38,10 @@ process pseudobulk_singlecell {
       slot       = "${params.counts_slot}"
     )
 
-    for (i in seq_along(aggregated_by_ct)) {
-      df <- aggregated_by_ct[[i]] %>% mutate(geneid = rownames(.)
-      ct <- names(aggregated_by_ct)[i]
+    # write only non-empty CT matrices
+    valid_cts <- names(aggregated_by_ct)[vapply(aggregated_by_ct, ncol, integer(1)) > 0]
+    for (ct in valid_cts) {
+      df <- aggregated_by_ct[[ct]] %>% mutate(geneid = rownames(.))
       data.table::fwrite(df, paste0(ct, "_pseudobulk.csv"))
     }
 
@@ -53,15 +54,16 @@ process pseudobulk_singlecell {
       assay      = "${params.counts_assay}",
       slot       = "${params.counts_slot}"
     )
-    bulk_df <- aggregated_bulk[[1]] %>% mutate(geneid = rownames(.)
+    bulk_df <- aggregated_bulk[[1]] %>% mutate(geneid = rownames(.))
     data.table::fwrite(bulk_df, "Bulk_pseudobulk.csv")
 
-
-    gene_locations <- get_gene_locations(counts_mat))
+    # Gene locations: use first non-empty CT, else Bulk (avoids undefined counts_mat)
+    ref_mat <- if (length(valid_cts) > 0) aggregated_by_ct[[ valid_cts[1] ]] else aggregated_bulk[[1]]
+    gene_locations <- get_gene_locations(ref_mat)
     data.table::fwrite(gene_locations, "gene_locations.csv")
 
-    # List of “cell types” emitted (now includes Bulk)
-    ct_names <- c(names(aggregated_by_ct), "Bulk")
+    # ct_names = only non-empty CTs + Bulk
+    ct_names <- c(valid_cts, "Bulk")
     writeLines(ct_names, "ct_names.txt")
     """
 }
