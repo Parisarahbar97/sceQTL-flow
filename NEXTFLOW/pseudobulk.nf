@@ -39,7 +39,7 @@ process pseudobulk_singlecell {
     )
 
     for (i in seq_along(aggregated_by_ct)) {
-      df <- aggregated_by_ct[[i]] %>% mutate(geneid = rownames(.))
+      df <- aggregated_by_ct[[i]] %>% mutate(geneid = rownames(.)
       ct <- names(aggregated_by_ct)[i]
       data.table::fwrite(df, paste0(ct, "_pseudobulk.csv"))
     }
@@ -56,12 +56,7 @@ process pseudobulk_singlecell {
     bulk_df <- aggregated_bulk[[1]] %>% mutate(geneid = rownames(.))
     data.table::fwrite(bulk_df, "Bulk_pseudobulk.csv")
 
-    # Gene locations (robust, based on assay rownames)
-    counts_mat <- Seurat::GetAssayData(
-      object = seuratobj,
-      assay  = "${params.counts_assay}",
-      slot   = "${params.counts_slot}"
-    )
+
     gene_locations <- get_gene_locations(counts_mat))
     data.table::fwrite(gene_locations, "gene_locations.csv")
 
