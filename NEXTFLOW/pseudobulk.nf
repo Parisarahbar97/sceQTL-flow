@@ -53,7 +53,7 @@ process pseudobulk_singlecell {
       assay      = "${params.counts_assay}",
       slot       = "${params.counts_slot}"
     )
-    bulk_df <- aggregated_bulk[[1]] %>% mutate(geneid = rownames(.))
+    bulk_df <- aggregated_bulk[[1]] %>% mutate(geneid = rownames(.)
     data.table::fwrite(bulk_df, "Bulk_pseudobulk.csv")
 
 
