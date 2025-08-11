@@ -5,8 +5,8 @@ workdir=$EPHEMERAL/NEXTFLOW
 
 outdir="/rds/general/user/pr422/projects/puklandmarkproject/live/Users/Parisa/parisa_eqtl/eQTL_output_bulk"
 cov_file="/rds/general/user/pr422/projects/puklandmarkproject/live/Users/Parisa/parisa_eqtl/epilepsy_metadata_matrixeqtl.csv"
-gds_file="/rds/general/user/pr422/projects/puklandmarkproject/ephemeral/alex/sc_eQTL_runs/BONN_post_imputation_QC.gds"
-single_cell_file="/rds/general/user/pr422/projects/puklandmarkproject/live/Users/Parisa/parisa_eqtl/matched_seuratobj/matched_seurat_demuxlet.rds"
+gds_file="/rds/general/user/pr422/projects/puklandmarkproject/live/Users/Parisa/parisa_eqtl/BONN_post_imputation_QC.gds"
+single_cell_file="/rds/general/user/pr422/projects/puklandmarkproject/live/Users/Parisa/parisa_eqtl/eqtl_25july/eQTL_input/seurat_with_individual_id.rds"
 
 
 nextflow run . \
